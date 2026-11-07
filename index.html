@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Medicine Reminder</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+:root{--bg:#f3f7f6;--card:#fff;--ink:#14302d;--mute:#5a7370;--line:#d3e0dd;--brand:#0f766e;--brand-ink:#fff;--warn:#b45309;--warnbg:#fef3c7;--ok:#e1f3ee;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1b1a;--card:#162826;--ink:#e6f2f0;--mute:#93b0ac;--line:#294541;--brand:#2dd4bf;--brand-ink:#052e2a;--warn:#fcd34d;--warnbg:#3a2c0b;--ok:#183a35}}
+:root[data-theme="dark"]{--bg:#0e1b1a;--card:#162826;--ink:#e6f2f0;--mute:#93b0ac;--line:#294541;--brand:#2dd4bf;--brand-ink:#052e2a;--warn:#fcd34d;--warnbg:#3a2c0b;--ok:#183a35}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.5 "Atkinson Hyperlegible",system-ui,sans-serif}
+main{max-width:560px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:28px;margin:8px 0 2px}
+h2{font-size:20px;margin:28px 0 10px}
+.sub{color:var(--mute);margin:0 0 18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+label{display:block;font-weight:700;margin:14px 0 6px}
+label:first-child{margin-top:0}
+input,select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:2px solid var(--line);border-radius:10px;padding:11px 12px}
+input:focus,select:focus,button:focus-visible{outline:3px solid var(--brand);outline-offset:1px}
+.times{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.row{display:flex;gap:10px}.row>*{flex:1}
+button{font:inherit;font-weight:700;border:0;border-radius:10px;padding:13px 16px;cursor:pointer;background:var(--brand);color:var(--brand-ink);width:100%;margin-top:18px}
+button.sm{width:auto;margin:0;padding:8px 12px;font-size:16px;background:transparent;color:var(--brand);border:2px solid var(--brand)}
+button.del{color:var(--warn);border-color:var(--warn)}
+.dose{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line)}
+.dose:last-child{border-bottom:0}
+.dose.done .nm{text-decoration:line-through;color:var(--mute)}
+.t{font-size:22px;font-weight:700;min-width:84px}
+.nm{flex:1}
+.empty{color:var(--mute);padding:8px 0}
+.med{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.med:last-child{border-bottom:0}
+.meta{color:var(--mute);font-size:16px}
+#alert{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--warnbg);color:var(--warn);border:2px solid var(--warn);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:none;font-weight:700}
+#alert button{margin-top:10px;background:var(--warn);color:var(--warnbg)}
+.slot{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.slot label{display:flex;align-items:center;gap:10px;margin:0;flex:1;font-weight:700}
+.slot input[type=checkbox]{width:24px;height:24px;accent-color:var(--brand)}
+.slot select{flex:1.2}
+.slot select:disabled{opacity:.45}
+details{margin-top:14px}summary{cursor:pointer;color:var(--brand);font-weight:700}
+.grp{padding:4px 0 8px}.grp+.grp{border-top:2px solid var(--line);margin-top:6px;padding-top:12px}
+.gh{display:flex;justify-content:space-between;align-items:baseline;font-weight:700;font-size:20px}
+.gh span{font-size:16px;color:var(--mute);font-weight:400}
+.food{font-size:15px;font-weight:700;color:var(--mute);margin:10px 0 0}
+.tag{display:inline-block;font-size:14px;font-weight:700;padding:1px 8px;border-radius:99px;background:var(--ok);color:var(--ink);margin-left:6px}
+.note{font-size:15px;color:var(--mute);margin-top:22px}
+</style>
+</head>
+<body>
+<main>
+  <div id="alert" role="alert"></div>
+  <h1>Medicine Reminder</h1>
+  <p class="sub">No account needed. Your list stays on this device.</p>
+
+  <section class="card" aria-labelledby="addh">
+    <label for="name">Medicine name</label>
+    <input id="name" placeholder="e.g. Paracetamol 500 mg" autocomplete="off">
+    <label>When do you take it?</label>
+    <div id="slots"></div>
+    <details><summary>Change reminder times</summary>
+      <div class="times" id="slottimes" style="margin-top:10px"></div>
+    </details>
+    <label for="days">For how many days?</label>
+    <input id="days" type="number" min="1" max="365" value="5" inputmode="numeric">
+    <button id="save">Save reminder</button>
+  </section>
+
+  <h2>Today</h2>
+  <div class="card" id="today"></div>
+
+  <h2>My medicines</h2>
+  <div class="card" id="list"></div>
+
+  <p class="note">Reminders ring at the time set for Morning, Afternoon and Evening, while this page is open. Keep it open on your phone, or allow notifications when asked.</p>
+</main>
+
+<script>
+var K='medrem.v2', meds=[], taken={}, fired={}, T={m:'08:00',a:'13:00',e:'20:00'};
+var SL=[['m','Morning'],['a','Afternoon'],['e','Evening']], FD={b:'Before food',a:'After food'};
+function load(){try{var d=JSON.parse(localStorage.getItem(K)||'{}');meds=d.meds||[];taken=d.taken||{};T=d.T||T;}catch(e){}}
+function store(){try{localStorage.setItem(K,JSON.stringify({meds:meds,taken:taken,T:T}));}catch(e){}}
+function $(id){return document.getElementById(id)}
+function pad(n){return (n<10?'0':'')+n}
+function ymd(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function fmt(t){var p=t.split(':'),h=+p[0],a=h>=12?'PM':'AM';h=h%12||12;return h+':'+p[1]+' '+a}
+function esc(s){return s.replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function dayIndex(m,now){return Math.round((new Date(ymd(now)+'T00:00:00')-new Date(m.start+'T00:00:00'))/864e5)}
+function active(m,now){var i=dayIndex(m,now);return i>=0&&i<m.days}
+function drawForm(){
+  $('slots').innerHTML=SL.map(function(x){return '<div class="slot"><label><input type="checkbox" data-s="'+x[0]+'">'+x[1]+'</label><select data-f="'+x[0]+'" disabled aria-label="'+x[1]+' food timing"><option value="b">Before food</option><option value="a" selected>After food</option></select></div>'}).join('');
+  $('slottimes').innerHTML=SL.map(function(x){return '<div><div class="meta">'+x[1]+'</div><input type="time" data-t="'+x[0]+'" value="'+T[x[0]]+'" aria-label="'+x[1]+' time"></div>'}).join('');
+}
+function render(){
+  var now=new Date(),today=ymd(now),h='';
+  SL.forEach(function(x){
+    var d=[];meds.forEach(function(m){if(active(m,now)&&m.slots[x[0]])d.push({m:m,f:m.slots[x[0]],k:today+'|'+m.id+'|'+x[0]})});
+    if(!d.length)return;
+    var done=d.filter(function(i){return taken[i.k]}).length;
+    h+='<div class="grp"><div class="gh">'+x[1]+' · '+fmt(T[x[0]])+'<span>'+done+' of '+d.length+' taken</span></div>';
+    ['b','a'].forEach(function(f){var g=d.filter(function(i){return i.f===f});if(!g.length)return;
+      h+='<div class="food">'+FD[f]+'</div>'+g.map(function(i){var dn=taken[i.k];return '<div class="dose'+(dn?' done':'')+'"><span class="nm">'+esc(i.m.name)+'</span><button class="sm" data-k="'+i.k+'">'+(dn?'Undo':'Taken')+'</button></div>'}).join('')});
+    h+='</div>';
+  });
+  $('today').innerHTML=h||'<div class="empty">Nothing due today. Add a medicine above.</div>';
+  $('list').innerHTML=meds.length?meds.map(function(m){
+    var i=dayIndex(m,now),left=m.days-i,st=i<0?'Starts soon':left>0?left+(left==1?' day left':' days left'):'Course finished';
+    var w=SL.filter(function(x){return m.slots[x[0]]}).map(function(x){return x[1]+' ('+FD[m.slots[x[0]]].toLowerCase()+')'}).join(', ');
+    return '<div class="med"><div><strong>'+esc(m.name)+'</strong><div class="meta">'+w+' · '+st+'</div></div><button class="sm del" data-d="'+m.id+'" aria-label="Delete '+esc(m.name)+'">Delete</button></div>'}).join('')
+    :'<div class="empty">No medicines saved yet.</div>';
+}
+function beep(){try{var c=new (window.AudioContext||window.webkitAudioContext)(),n=0;
+  (function b(){if(n++>=4)return;var o=c.createOscillator(),g=c.createGain();o.frequency.value=880;g.gain.value=.2;o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.25);setTimeout(b,500)})();}catch(e){}}
+function ring(sl,list){
+  var txt=['b','a'].map(function(f){var g=list.filter(function(d){return d.f===f});return g.length?'<div>'+FD[f]+': '+g.map(function(d){return esc(d.m.name)}).join(', ')+'</div>':''}).join('');
+  $('alert').innerHTML='Time for your '+sl[1].toLowerCase()+' medicines ('+list.length+')'+txt+'<button id="ok">OK, got it</button>';
+  $('alert').style.display='block';$('ok').onclick=function(){$('alert').style.display='none'};
+  beep();
+  try{if('Notification' in window&&Notification.permission==='granted')new Notification(sl[1]+' medicines',{body:list.map(function(d){return d.m.name+' ('+FD[d.f].toLowerCase()+')'}).join(', ')});}catch(e){}
+  try{if(navigator.vibrate)navigator.vibrate([300,150,300]);}catch(e){}
+}
+function tick(){
+  var now=new Date(),hm=pad(now.getHours())+':'+pad(now.getMinutes()),today=ymd(now);
+  SL.forEach(function(x){if(T[x[0]]!==hm)return;var due=[];
+    meds.forEach(function(m){var k=today+'|'+m.id+'|'+x[0];if(active(m,now)&&m.slots[x[0]]&&!taken[k]){due.push({m:m,f:m.slots[x[0]]})}});
+    var fk=today+'|'+x[0]+'|'+hm;if(due.length&&!fired[fk]){fired[fk]=1;ring(x,due)}});
+}
+$('save').onclick=function(){
+  var name=$('name').value.trim(),days=parseInt($('days').value,10),slots={};
+  SL.forEach(function(x){if(document.querySelector('[data-s="'+x[0]+'"]').checked)slots[x[0]]=document.querySelector('[data-f="'+x[0]+'"]').value});
+  if(!name){$('name').focus();alert('Type the medicine name.');return}
+  if(!Object.keys(slots).length){alert('Choose at least one: morning, afternoon or evening.');return}
+  if(!(days>=1)){$('days').focus();alert('Enter how many days (1 or more).');return}
+  meds.push({id:String(Date.now()),name:name,slots:slots,days:days,start:ymd(new Date())});
+  store();$('name').value='';drawForm();render();
+  try{if('Notification' in window&&Notification.permission==='default')Notification.requestPermission()}catch(e){}
+};
+document.addEventListener('change',function(e){
+  var t=e.target,s=t.getAttribute('data-s'),r=t.getAttribute('data-t');
+  if(s)document.querySelector('[data-f="'+s+'"]').disabled=!t.checked;
+  if(r&&t.value){T[r]=t.value;store();render()}
+});
+document.addEventListener('click',function(e){
+  var k=e.target.getAttribute&&e.target.getAttribute('data-k'),d=e.target.getAttribute&&e.target.getAttribute('data-d');
+  if(k){if(taken[k])delete taken[k];else taken[k]=1;store();render()}
+  if(d&&confirm('Delete this medicine?')){meds=meds.filter(function(m){return m.id!==d});store();render()}
+});
+load();drawForm();render();tick();
+setInterval(tick,15000);setInterval(render,60000);
+</script>
+</body>
+</html>
